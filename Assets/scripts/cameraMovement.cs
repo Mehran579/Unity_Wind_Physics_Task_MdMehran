@@ -1,7 +1,7 @@
 using UnityEngine;
 using UnityEngine.InputSystem;
 
-public class lwkmoment : MonoBehaviour
+public class cameraMovement : MonoBehaviour
 {
     [Header("Movement")]
     public float moveSpeed = 10f;
@@ -13,6 +13,12 @@ public class lwkmoment : MonoBehaviour
     private float pitch = 0f;
 
     public GameObject panel;
+
+    public void Awake()
+    {
+        Cursor.lockState = panel.activeSelf ? CursorLockMode.None : CursorLockMode.Locked;
+        Cursor.visible = panel.activeSelf;
+    }
     void Update()
     {
         if (Keyboard.current.eKey.wasPressedThisFrame)
@@ -85,5 +91,11 @@ public class lwkmoment : MonoBehaviour
         Vector3 movement = transform.TransformDirection(input);
 
         transform.position += movement * moveSpeed * Time.deltaTime;
+    }
+    public void closePanel()
+    {
+        panel.SetActive(!panel.activeSelf);
+        Cursor.lockState = panel.activeSelf ? CursorLockMode.None : CursorLockMode.Locked;
+        Cursor.visible = panel.activeSelf;
     }
 }

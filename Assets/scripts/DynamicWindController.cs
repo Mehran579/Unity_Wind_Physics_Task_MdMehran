@@ -1,4 +1,9 @@
+//using JetBrains.Annotations;
+//using UnityEditor;
+using TMPro;
+using Unity.Mathematics;
 using UnityEngine;
+using UnityEngine.InputSystem;
 using UnityEngine.UI;
 using static temp;
 
@@ -6,25 +11,27 @@ public class DynamicWindController : MonoBehaviour
 {
     public WindZone windzone;
 
+    [Header("shader refrences")]
     static readonly int WindSpeedID = Shader.PropertyToID("Wind_Speed");
     static readonly int WindIntensityID = Shader.PropertyToID("Wind_Intensity");
     static readonly int WindTurbulenceID = Shader.PropertyToID("Wind_Turbulence");         //bush, plants, grass shader graph wind properties cached
     static readonly int WindBlastID = Shader.PropertyToID("Wind_Blast");
     static readonly int WindRipplesID = Shader.PropertyToID("Wind_Ripples");
     static readonly int WindYawID = Shader.PropertyToID("Wind_Yaw");
-
+    public float shaderPulseMagnitudeMultiplier;
+    public float shaderPulseFrequencyMultiplier;
 
     [Header("UI")]
     public Slider speedSlider;
     public Slider strenghtSLider;
     public Slider directionSlider;
-
+    public GameObject panel;
     [Header("Player Inputs")]
     public float speedInput;
     public float strenghtInput;
     public float directionInput;
-    public windStates currentstate;
-    public enum windStates
+    public windstates currentstate;
+    public enum windstates
     {
         Custom,
         Normal,
@@ -38,52 +45,98 @@ public class DynamicWindController : MonoBehaviour
     [SerializeField] private WindPresetData normalPreset = new WindPresetData { speed = 5f, strength = 0.5f, directionYaw = 0f, pulseMagnitude = 1f, pulseFrequency = 0.5f };
     [SerializeField] private WindPresetData stormyPreset = new WindPresetData { speed = 15f, strength = 1.2f, directionYaw = 0f, pulseMagnitude = 3f, pulseFrequency = 1f };
     [SerializeField] private WindPresetData tropicalPreset = new WindPresetData { speed = 25f, strength = 2f, directionYaw = 0f, pulseMagnitude = 5f, pulseFrequency = 1.5f };
+    bool presetapplied;
+    private void Awake()
+    {
+        currentstate = windstates.Custom;
+        speedInput = speedSlider.value;
+        strenghtInput = strenghtSLider.value;
+        directionInput = directionSlider.value;
+        updateUItext(directionInput);
+        
+    }
     void Update()
     {
+
+        Shader.SetGlobalFloat(WindSpeedID, math.remap(0, speedSlider.maxValue, 5, 30, windzone.windMain));
+        //Shader.SetGlobalFloat(WindSpeedID, tempspeed);
+        //Shader.SetGlobalFloat(WindIntensityID, Mathf.InverseLerp(0.1f,1.1f,windzone.windTurbulence));
+        Shader.SetGlobalFloat(WindIntensityID, windzone.windTurbulence);
+        Shader.SetGlobalFloat(WindTurbulenceID, 0);
+        Shader.SetGlobalFloat(WindBlastID, 0.05f);
+        Shader.SetGlobalFloat(WindRipplesID, 0.05f);
+        Shader.SetGlobalFloat(WindYawID, 90 + directionInput);
         switch (currentstate)
         {
-            case windStates.Custom:
+            case windstates.Custom:
                 windzone.windMain = speedInput;
                 windzone.windTurbulence = strenghtInput;
                 windzone.transform.rotation = Quaternion.Euler(0, directionInput, 0);
                 //WindPresetData custompreset = new WindPresetData { speed = speedInput, strength = strenghtInput, directionYaw = directionInput };
                 //applypreset(custompreset);
                 break;
-            case windStates.Normal:
-                applypreset(normalPreset);
+            case windstates.Normal:
+                if (!presetapplied)
+                    applypreset(normalPreset);
                 break;
-            case windStates.Breezy:
-                applypreset(breezyPreset);
+            case windstates.Breezy:
+                if (!presetapplied)
+                    applypreset(breezyPreset);
                 break;
-            case windStates.Tropical:
-                applypreset(tropicalPreset);
-
+            case windstates.Tropical:
+                if (!presetapplied)
+                    applypreset(tropicalPreset);
                 break;
-            case windStates.Stormy:
-                applypreset(stormyPreset);
-
+            case windstates.Stormy:
+                if (!presetapplied)
+                    applypreset(stormyPreset);
                 break;
         }
     }
     void applypreset(WindPresetData presettoapply)
     {
+        presetapplied = true;
         windzone.windMain = presettoapply.speed;
         windzone.windTurbulence = presettoapply.strength;
-        windzone.transform.rotation = Quaternion.Euler(0, presettoapply.directionYaw, 0); 
+        windzone.transform.rotation = Quaternion.Euler(0, presettoapply.directionYaw, 0);
         speedSlider.value = presettoapply.speed;
         strenghtSLider.value = presettoapply.strength;
         directionSlider.value = presettoapply.directionYaw;
+        updateUItext(presettoapply.directionYaw);
         //windzone.windMain = 
+
     }
     public void OnDropdownChanged(int index)
     {
-        currentstate = (windStates)index;
-        bool isCustom = (currentstate == windStates.Custom);
+        presetapplied = false;
+        currentstate = (windstates)index;
+        bool isCustom = (currentstate == windstates.Custom);
         speedSlider.interactable = isCustom;                           //syncs teh drop down with states
         strenghtSLider.interactable = isCustom;
         directionSlider.interactable = isCustom;
     }
-    public void OnSpeedSliderChanged(float value) => speedInput = value;
-    public void OnStrengthSliderChanged(float value) => strenghtInput = value;              //runs when slider is changed;
-    public void OnDirectionSliderChanged(float value) => directionInput = value;
+    public TMP_Text speedtext;
+    public TMP_Text strengthtext;
+    public TMP_Text directiontext;
+    public void OnSpeedSliderChanged(float value)
+    {
+        speedInput = value;
+        speedtext.text = value.ToString("f0");
+    }
+    public void OnStrengthSliderChanged(float value)
+    {
+        strenghtInput = value;
+        strengthtext.text = (value*100).ToString("f0");
+    }           
+    public void OnDirectionSliderChanged(float value)
+    {
+        directionInput = value;
+        directiontext.text = value.ToString("f0");
+    }
+    void updateUItext(float diry)
+    {
+        speedtext.text = windzone.windMain.ToString("f0");
+        strengthtext.text = (windzone.windTurbulence*100).ToString("f0");
+        directiontext.text = diry.ToString("f0");
+    }
 }
