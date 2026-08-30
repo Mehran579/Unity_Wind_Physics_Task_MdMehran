@@ -1,5 +1,7 @@
+using TMPro;
 using UnityEngine;
 using UnityEngine.InputSystem;
+using UnityEngine.UI;
 
 public class cameraMovement : MonoBehaviour
 {
@@ -18,21 +20,31 @@ public class cameraMovement : MonoBehaviour
     {
         Cursor.lockState = panel.activeSelf ? CursorLockMode.None : CursorLockMode.Locked;
         Cursor.visible = panel.activeSelf;
+        OnCountSliderChanged(countslider.value);
+        OnSizeSliderChanged(radiusslider.value);
+        OnMassSliderChanged(massSlider.value);
     }
     void Update()
     {
         if (Keyboard.current.eKey.wasPressedThisFrame)
         {
-            panel.SetActive(!panel.activeSelf);
-            Cursor.lockState = panel.activeSelf ? CursorLockMode.None : CursorLockMode.Locked;
-            Cursor.visible = panel.activeSelf;
+            togglePanel();
         }
         if (panel.activeSelf)
             return;
         Look();
         Move();
     }
-
+    public void togglePanel()
+    {
+        panel.SetActive(!panel.activeSelf);
+        Cursor.lockState = panel.activeSelf ? CursorLockMode.None : CursorLockMode.Locked;
+        Cursor.visible = panel.activeSelf;
+    }
+    public void OnCLickPanel()
+    {
+        togglePanel();
+    }
     void Look()
     {
         if (Mouse.current == null)
@@ -92,10 +104,78 @@ public class cameraMovement : MonoBehaviour
 
         transform.position += movement * moveSpeed * Time.deltaTime;
     }
-    public void closePanel()
+    
+
+    [Header("Ball Spawn")]
+    public GameObject ballPrefab;
+    public float spawnDistance = 3f;
+    public float baseCheckRadius = 0.5f; 
+    public LayerMask terrain;
+
+    [Header("Spawn Stats")]
+    public int countToSpawn;
+    public float ballSize;   
+    public float ballMass;   
+
+    [Header ("UI")]
+    public Slider countslider;
+    public Slider radiusslider;
+    public Slider massSlider;
+
+    public TMP_Text countLabel;
+    public TMP_Text sizeLabel;
+    public TMP_Text massLabel;
+
+    public float minMass = 1f;
+    public float maxMass = 10f;
+
+    public Color lightMassColor = Color.green;
+    public Color heavyMassColor = Color.red;
+    public void OnCountSliderChanged(float value)
     {
-        panel.SetActive(!panel.activeSelf);
-        Cursor.lockState = panel.activeSelf ? CursorLockMode.None : CursorLockMode.Locked;
-        Cursor.visible = panel.activeSelf;
+        countToSpawn = (int)value;
+        countLabel.text = value.ToString("F1"); 
+    }
+    public void OnSizeSliderChanged(float value)
+    {
+        ballSize = value;
+        sizeLabel.text = value.ToString("F1"); 
+    }
+    public void OnMassSliderChanged(float value)
+    {
+        ballMass= value;
+        massLabel.text = value.ToString("F1"); 
+    }
+
+    public void OnSpawnClicked()
+    {
+
+        for (int n = 0; n < countToSpawn; n++)
+            TrySpawnOne();
+    }
+
+    void TrySpawnOne()
+    {
+        Vector3 basePos = transform.position + transform.forward * spawnDistance;
+        float checkRadius = baseCheckRadius * ballSize;
+
+        for (int i = 0; i < 5; i++)
+        {
+            Vector3 candidate = basePos + new Vector3(Random.Range(-1f, 1f), 0, Random.Range(-1f, 1f));
+
+            if (!Physics.CheckSphere(candidate, checkRadius, terrain))
+            {
+                GameObject ball = Instantiate(ballPrefab, candidate, Random.rotation);
+                ball.transform.localScale = Vector3.one * ballSize;
+                ball.GetComponent<Rigidbody>().mass = ballMass;
+
+                float mass01 = Mathf.InverseLerp(minMass, maxMass, ballMass);
+                Color ballColor = Color.Lerp(lightMassColor, heavyMassColor, mass01);
+                Renderer renderer = ball.GetComponent<Renderer>();
+                renderer.material.color = ballColor;
+                
+                return;
+            }
+        }
     }
 }

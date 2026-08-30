@@ -36,6 +36,7 @@ public class DynamicWindController : MonoBehaviour
         Custom,
         Normal,
         Breezy,
+        Windy,
         Tropical,
         Stormy
     }
@@ -43,8 +44,9 @@ public class DynamicWindController : MonoBehaviour
     [Header("Preset Value")]
     [SerializeField] private WindPresetData breezyPreset = new WindPresetData { speed = 2f, strength = 0.3f, directionYaw = 0f, pulseMagnitude = 0.5f, pulseFrequency = 0.2f };
     [SerializeField] private WindPresetData normalPreset = new WindPresetData { speed = 5f, strength = 0.5f, directionYaw = 0f, pulseMagnitude = 1f, pulseFrequency = 0.5f };
-    [SerializeField] private WindPresetData stormyPreset = new WindPresetData { speed = 15f, strength = 1.2f, directionYaw = 0f, pulseMagnitude = 3f, pulseFrequency = 1f };
+    [SerializeField] private WindPresetData windyPreset = new WindPresetData { speed = 5f, strength = 0.5f, directionYaw = 0f, pulseMagnitude = 1f, pulseFrequency = 0.5f };
     [SerializeField] private WindPresetData tropicalPreset = new WindPresetData { speed = 25f, strength = 2f, directionYaw = 0f, pulseMagnitude = 5f, pulseFrequency = 1.5f };
+    [SerializeField] private WindPresetData stormyPreset = new WindPresetData { speed = 15f, strength = 1.2f, directionYaw = 0f, pulseMagnitude = 3f, pulseFrequency = 1f };          //presetting scenarios to start with , the custom still updates live
     bool presetapplied;
     private void Awake()
     {
@@ -53,7 +55,10 @@ public class DynamicWindController : MonoBehaviour
         strenghtInput = strenghtSLider.value;
         directionInput = directionSlider.value;
         updateUItext(directionInput);
-        
+
+        windzone.windMain = speedInput;
+        windzone.windTurbulence = strenghtInput;                                       //synchronizing everything
+        windzone.transform.rotation = Quaternion.Euler(0, directionInput, 0);
     }
     void Update()
     {
@@ -82,6 +87,10 @@ public class DynamicWindController : MonoBehaviour
             case windstates.Breezy:
                 if (!presetapplied)
                     applypreset(breezyPreset);
+                break;
+            case windstates.Windy:
+                if (!presetapplied)
+                    applypreset(windyPreset);
                 break;
             case windstates.Tropical:
                 if (!presetapplied)
@@ -136,7 +145,7 @@ public class DynamicWindController : MonoBehaviour
     void updateUItext(float diry)
     {
         speedtext.text = windzone.windMain.ToString("f0");
-        strengthtext.text = (windzone.windTurbulence*100).ToString("f0");
+        strengthtext.text = (strenghtSLider.value * 100).ToString("f0");
         directiontext.text = diry.ToString("f0");
     }
 }
